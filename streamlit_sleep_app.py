@@ -243,6 +243,8 @@ h1, h2, h3, h4 {
 }
 
 def _cyber_plotly_base(fig: go.Figure) -> None:
+  # Change color to something brighter like #e0e0e0 (off-white) or #00f5ff (cyan)
+        font=dict(color="#e0e0e0", family="Share Tech Mono, monospace", size=12),
     fig.update_layout(
         template=None,
         paper_bgcolor=CYBER_PANEL,
