@@ -231,7 +231,16 @@ CYBERPUNK_CSS = """
 
 def inject_cyberpunk_theme() -> None:
     st.markdown(CYBERPUNK_CSS, unsafe_allow_html=True)
+/* Force all interpretation and body text to be off-white/bright */
+.stMarkdown p, .stMarkdown span, .stMarkdown div {
+    color: #e0e0e0 !important;
+    line-height: 1.6;
+}
 
+/* Specifically target the 'Memory / consolidation read' headers */
+h1, h2, h3, h4 {
+    color: #00f5ff !important; /* Cyan to match your theme */
+}
 
 def _cyber_plotly_base(fig: go.Figure) -> None:
     fig.update_layout(
