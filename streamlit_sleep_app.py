@@ -271,10 +271,19 @@ def load_hypnogram(hyp_path: Path) -> np.ndarray:
     return np.rint(hyp_data).astype(int)
 
 
-def hyp_to_annotations(hyp: np.ndarray) -> mne.Annotations:
+def hyp_to_annotations(hyp: np.ndarray, max_duration: float) -> mne.Annotations:
     onset = np.arange(len(hyp), dtype=float) * EPOCH_SEC
     duration = np.full(len(hyp), EPOCH_SEC, dtype=float)
-    desc = [f"Stage {int(s)}" for s in hyp]
+    
+    # Safety: Clip any annotation that goes past the end of the recording
+    mask = onset < max_duration
+    onset = onset[mask]
+    duration = duration[mask]
+    # Ensure the last annotation doesn't overstep
+    if len(onset) > 0 and (onset[-1] + duration[-1] > max_duration):
+        duration[-1] = max_duration - onset[-1]
+        
+    desc = [f"Stage {int(hyp[i])}" for i in range(len(onset))]
     return mne.Annotations(onset=onset, duration=duration, description=desc)
 
 
