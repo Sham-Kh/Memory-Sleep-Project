@@ -327,8 +327,8 @@ def analyze_sleep(
         # Ensure the hypnogram and EEG match in length
         # YASA needs these to be aligned perfectly
         raw.set_annotations(hyp_to_annotations(hyp_epoch))
-# --- NEW TRIMMING LOGIC ---
-        # Get durations
+      
+# --- START OF TRIMMING LOGIC ---
         eeg_dur = raw.n_times / sf
         hyp_dur = len(hyp_epoch) * EPOCH_SEC
         
@@ -340,8 +340,17 @@ def analyze_sleep(
         # If EEG is longer, trim the EEG to match the last full hypnogram epoch
         elif eeg_dur > hyp_dur:
             raw.crop(0, hyp_dur)
-            data = raw.get_data(picks=[ch_name]).squeeze() * 1e6
-            times = raw.times.copy()
+
+        # MOVED OUTSIDE: These lines must always run
+        ch_name = find_channel(raw, DEFAULT_CHANNEL)
+        data = raw.get_data(picks=[ch_name]).squeeze() * 1e6
+        times = raw.times.copy()
+        # --- END OF TRIMMING LOGIC ---
+
+        # Now proceed with upsampling
+        hyp_sample = yasa.hypno_upsample_to_data(
+            hypno=hyp_epoch, sf_hypno=1 / EPOCH_SEC, data=data, sf_data=sf
+        )
         # --- END OF TRIMMING LOGIC ---
 
         # Now proceed with upsampling
