@@ -236,13 +236,13 @@ CYBERPUNK_CSS = """
 <style>
 /* Force all interpretation and body text to be off-white/bright */
 .stMarkdown p, .stMarkdown span, .stMarkdown div {
-    color: #e0e0e0 !important;
+    color: #595d76 !important;
     line-height: 1.6;
 }
 
 /* Specifically target the 'Memory / consolidation read' headers */
 h1, h2, h3, h4 {
-    color: #00f5ff !important; 
+    color: #6fdee3 !important; 
 }
 </style>
 """
@@ -255,8 +255,8 @@ def _cyber_plotly_base(fig: go.Figure) -> None:
         template=None,
         paper_bgcolor=CYBER_PANEL,
         plot_bgcolor=CYBER_BG,
-        # Updated to the brighter #e0e0e0 color and slightly larger size
-        font=dict(color="#e0e0e0", family="Share Tech Mono, monospace", size=12),
+        # Updated to the brighter #595d76 color and slightly larger size
+        font=dict(color="#595d76", family="Share Tech Mono, monospace", size=12),
         title_font=dict(color=CYBER_ACCENT, size=14, family="Orbitron, sans-serif"),
         xaxis=dict(gridcolor=CYBER_GRID, zerolinecolor=CYBER_GRID),
         yaxis=dict(gridcolor=CYBER_GRID, zerolinecolor=CYBER_GRID),
@@ -723,8 +723,8 @@ def plotly_eeg_window(
 
 def main() -> None:
     st.set_page_config(
-        page_title="Sleep analysis",
-        page_icon="🌙",
+        page_title="Sleep Analysis",
+        page_icon="🌘",
         layout="wide",
     )
     inject_cyberpunk_theme()
