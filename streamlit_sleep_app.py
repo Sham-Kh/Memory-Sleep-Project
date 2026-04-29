@@ -558,11 +558,17 @@ def plotly_so_spindle_coupling(phase_deg: np.ndarray, sigma: np.ndarray) -> go.F
         margin=dict(l=40, r=50, t=56, b=40),
         paper_bgcolor=CYBER_PANEL,
         font=dict(color="#c5cee0", family="Share Tech Mono, monospace"),
-        legend=dict(
+     legend=dict(
             font=dict(color="#b8c0d8", size=10),
             bgcolor="rgba(10,10,18,0.85)",
             bordercolor=CYBER_ACCENT,
             borderwidth=1,
+            # --- ADD THESE THREE LINES BELOW ---
+            orientation="h",       # Makes the legend horizontal
+            yanchor="bottom",      # Anchors the legend to its bottom
+            y=-0.2,                # Moves it below the plot (out of the way)
+            xanchor="center",
+            x=0.5
         ),
     )
     return fig
