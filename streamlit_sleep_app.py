@@ -305,44 +305,51 @@ def analyze_sleep(
     hyp_bytes: bytes,
     _rec_suffix: str,
 ) -> dict:
+    import io
+    
+    # We use a temporary directory to handle the .rec extension trick
     with tempfile.TemporaryDirectory() as td:
         td_path = Path(td)
-        rec_path = td_path / f"upload{_rec_suffix if _rec_suffix else '.rec'}"
+        # Create a file with an .edf suffix so MNE knows how to read it
+        rec_path = td_path / "data.edf" 
         hyp_path = td_path / "upload.hyp"
+        
         rec_path.write_bytes(rec_bytes)
         hyp_path.write_bytes(hyp_bytes)
 
-        raw = read_raw_from_uploaded_rec(rec_path)
+        # Load the EEG
+        raw = mne.io.read_raw_edf(rec_path, preload=True, verbose=False)
         sf = float(raw.info["sfreq"])
+        
+        # Load the Hypnogram
         hyp_epoch = load_hypnogram(hyp_path)
+        
+        # Ensure the hypnogram and EEG match in length
+        # YASA needs these to be aligned perfectly
         raw.set_annotations(hyp_to_annotations(hyp_epoch))
 
         ch_name = find_channel(raw, DEFAULT_CHANNEL)
         data = raw.get_data(picks=[ch_name]).squeeze() * 1e6
         times = raw.times.copy()
 
+        # Resample hypnogram to match EEG data points
         hyp_sample = yasa.hypno_upsample_to_data(
             hypno=hyp_epoch, sf_hypno=1 / EPOCH_SEC, data=data, sf_data=sf
         )
+        
+        # Filter for only N2 and N3 sleep stages
         hyp_for_detect = hyp_sample.copy()
         hyp_for_detect[~np.isin(hyp_for_detect, [N2_STAGE, N3_STAGE])] = -99
 
+        # Run YASA detections
         sp = yasa.spindles_detect(
-            data=data,
-            sf=sf,
-            ch_names=[ch_name],
-            hypno=hyp_for_detect,
-            include=(N2_STAGE, N3_STAGE),
-            verbose=False,
+            data=data, sf=sf, ch_names=[ch_name],
+            hypno=hyp_for_detect, include=(N2_STAGE, N3_STAGE), verbose=False,
         )
         sw = yasa.sw_detect(
-            data=data,
-            sf=sf,
-            ch_names=[ch_name],
-            hypno=hyp_for_detect,
-            include=(N2_STAGE, N3_STAGE),
-            coupling=True,
-            verbose=False,
+            data=data, sf=sf, ch_names=[ch_name],
+            hypno=hyp_for_detect, include=(N2_STAGE, N3_STAGE),
+            coupling=True, verbose=False,
         )
 
         sp_df = sp.summary() if sp is not None else pd.DataFrame()
