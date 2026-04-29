@@ -246,29 +246,54 @@ def _cyber_plotly_base(fig: go.Figure) -> None:
 
 
 def load_hypnogram(hyp_path: Path) -> np.ndarray:
-    stages = []
-    with hyp_path.open("r", encoding="utf-8", errors="ignore") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                stages.append(int(float(line)))
-            except ValueError:
-                continue
-    if stages:
-        return np.asarray(stages, dtype=int)
-    temp_dir = tempfile.TemporaryDirectory()
+    """Specialized loader for hypnogram files with headers."""
     try:
-        hyp_edf = Path(temp_dir.name) / f"{hyp_path.stem}.edf"
-        shutil.copyfile(hyp_path, hyp_edf)
-        raw_hyp = mne.io.read_raw_edf(hyp_edf, preload=True, verbose=False)
-        hyp_data = raw_hyp.get_data(picks=[0]).squeeze()
-    finally:
-        temp_dir.cleanup()
-    if hyp_data.size == 0:
-        raise ValueError("No hypnogram values found.")
-    return np.rint(hyp_data).astype(int)
+        # Read the file as raw bytes first to handle special characters
+        content = hyp_path.read_bytes()
+        
+        # The 'actual' stage data usually starts after the 'Hypnogram' keyword
+        # and a long run of empty space or headers.
+        # We look for the common integer markers (0, 1, 2, 3, 4, 5)
+        # For your specific file format (Sleep-EDF), the stages are often at the end.
+        
+        # We'll try to find the start of the numeric sequence.
+        # Most of these files have a predictable structure where the stages 
+        # start after a specific byte offset.
+        
+        # NEW STRATEGY: Find the last few hundred bytes which contain the stages
+        # Stages are usually represented as integers (0=W, 1=N1, 2=N2, 3=N3, 4=N4, 5=REM)
+        
+        stages = []
+        # We start looking for the stages after the header info
+        header_end_signal = b"None"
+        start_index = content.find(header_end_signal)
+        
+        if start_index != -1:
+            # Skip past "None" and the extra spacing
+            raw_stages = content[start_index + 4:].strip()
+            # Convert bytes to integers, ignoring non-numeric junk
+            for b in raw_stages:
+                if 0 <= b <= 6: # Standard sleep stages are 0-6
+                    stages.append(int(b))
+        
+        if not stages:
+            # Fallback: if the logic above fails, try to just grab everything 
+            # that looks like a stage byte from the whole file
+            stages = [int(b) for b in content if 0 <= b <= 6]
+
+        hyp = np.array(stages)
+        
+        # If the hypnogram is massive (e.g., thousands of entries), 
+        # it's likely sampled at 1-second intervals. 
+        # We need it at 30-second intervals for the rest of the app logic.
+        if len(hyp) > 5000: 
+             hyp = hyp[::EPOCH_SEC]
+             
+        return hyp
+
+    except Exception as e:
+        st.error(f"Error parsing .hyp file: {e}")
+        return np.array([])
 
 
 def hyp_to_annotations(hyp: np.ndarray, max_duration: float) -> mne.Annotations:
