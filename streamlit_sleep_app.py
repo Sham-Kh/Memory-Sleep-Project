@@ -231,6 +231,9 @@ CYBERPUNK_CSS = """
 
 def inject_cyberpunk_theme() -> None:
     st.markdown(CYBERPUNK_CSS, unsafe_allow_html=True)
+# Ensure the CSS is defined as a string first
+CYBERPUNK_CSS = """
+<style>
 /* Force all interpretation and body text to be off-white/bright */
 .stMarkdown p, .stMarkdown span, .stMarkdown div {
     color: #e0e0e0 !important;
@@ -239,17 +242,21 @@ def inject_cyberpunk_theme() -> None:
 
 /* Specifically target the 'Memory / consolidation read' headers */
 h1, h2, h3, h4 {
-    color: #00f5ff !important; /* Cyan to match your theme */
+    color: #00f5ff !important; 
 }
+</style>
+"""
+
+def inject_cyberpunk_theme() -> None:
+    st.markdown(CYBERPUNK_CSS, unsafe_allow_html=True)
 
 def _cyber_plotly_base(fig: go.Figure) -> None:
-  # Change color to something brighter like #e0e0e0 (off-white) or #00f5ff (cyan)
-        font=dict(color="#e0e0e0", family="Share Tech Mono, monospace", size=12),
     fig.update_layout(
         template=None,
         paper_bgcolor=CYBER_PANEL,
         plot_bgcolor=CYBER_BG,
-        font=dict(color="#b8c0d8", family="Share Tech Mono, monospace", size=11),
+        # Updated to the brighter #e0e0e0 color and slightly larger size
+        font=dict(color="#e0e0e0", family="Share Tech Mono, monospace", size=12),
         title_font=dict(color=CYBER_ACCENT, size=14, family="Orbitron, sans-serif"),
         xaxis=dict(gridcolor=CYBER_GRID, zerolinecolor=CYBER_GRID),
         yaxis=dict(gridcolor=CYBER_GRID, zerolinecolor=CYBER_GRID),
