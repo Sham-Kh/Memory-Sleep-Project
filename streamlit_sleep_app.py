@@ -335,7 +335,9 @@ def analyze_sleep(
         
         # Ensure the hypnogram and EEG match in length
         # YASA needs these to be aligned perfectly
-        raw.set_annotations(hyp_to_annotations(hyp_epoch))
+# Get actual duration of the raw data
+        max_dur = raw.n_times / sf
+        raw.set_annotations(hyp_to_annotations(hyp_epoch, max_dur))
       
 # --- START OF TRIMMING LOGIC ---
         eeg_dur = raw.n_times / sf
