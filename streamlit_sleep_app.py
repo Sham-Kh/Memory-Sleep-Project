@@ -829,19 +829,18 @@ def main() -> None:
         ["EEG view", "Interpretation", "Summary table", "Coupling plot"]
     )
 
-data = results['data']
-times = results['times']
-sp_df = results['sp_df']
-ch_name = results['ch_name']
-sf = results['sf'] 
-hyp_sample = results['hyp_sample']
-  
+    # These variables must be extracted from the 'result' dictionary inside main()
+    # and the logic must be properly indented to stay inside the function.
+    sf = result['sf'] 
+    hyp_sample = result.get('hyp_sample') # Use .get if it might be missing
+
     with tab_raw:
         st.markdown(
             '<p class="cyber-section-title">EEG trace (30 s)</p>',
             unsafe_allow_html=True,
         )
         st.caption("Spindle detections are shaded in magenta.")
+        
         win_start = st.slider(
             "Window offset (s)",
             min_value=0.0,
@@ -851,8 +850,9 @@ hyp_sample = results['hyp_sample']
             help="30 s viewport. Use Plotly controls to zoom.",
         )
         
-        fig = plotly_eeg_window(times, data, sp_df, ['hyp_sample'], win_start, 30.0, ch_name, sf)
-    st.plotly_chart(fig, use_container_width=True)
+        # Fixed: passed hyp_sample variable instead of the string ['hyp_sample']
+        fig_eeg = plotly_eeg_window(times, data, sp_df, hyp_sample, win_start, 30.0, result["ch_name"], sf)
+        st.plotly_chart(fig_eeg, use_container_width=True)
 
     with tab_outlook:
         st.markdown(
@@ -871,42 +871,23 @@ hyp_sample = results['hyp_sample']
             f"(spindle {outlook['spindle_score']:.0f} · coupling {outlook['coupling_score']:.0f} · SW/min {outlook['sw_per_min']:.1f} → SW score {outlook['sw_score']:.0f})"
         )
         st.markdown("**Memory / consolidation read (research framing)**")
-        st.markdown(outlook["memory_narrative"])
+        st.write(outlook["memory_narrative"])
         st.markdown("**Sleep-quality signal (non-clinical)**")
-        st.markdown(outlook["quality_narrative"])
-        with st.expander("How to read these scores"):
-            st.markdown(
-                """
-- **Oscillatory index** blends spindle density (N2+N3), slow-wave rate per minute of N2+N3, and vector strength of SO–spindle phase coupling.
-- **Tiers** are stylized labels for a *single-night heuristic*; they do **not** replace polysomnography scoring or clinical judgment.
-- **Cognitive outcomes** here mean *literature-aligned interpretations* of oscillatory markers, not tested predictions of your cognition.
-                """
-            )
+        st.write(outlook["quality_narrative"])
 
     with tab_stats:
-        st.markdown(
-            '<p class="cyber-section-title">Summary numbers</p>',
-            unsafe_allow_html=True,
-        )
-        st.dataframe(report_df, use_container_width=True, hide_index=True)
-        st.caption("Spindle density = total spindles ÷ minutes of N2+N3.")
+        st.markdown('<p class="cyber-section-title">Metrics Summary</p>', unsafe_allow_html=True)
+        st.dataframe(report_df, use_container_width=True)
 
     with tab_research:
-        st.markdown(
-            '<p class="cyber-section-title">Slow oscillation and spindle coupling</p>',
-            unsafe_allow_html=True,
-        )
-        st.caption(
-            "Polar plot: slow-wave phase at the spindle (sigma) peak. "
-            "Tighter clustering is consistent with timed cortical coordination in some sleep models."
-        )
-        phase = result["phase"]
-        sigma = result["sigma_peak"]
-        if phase is None or sigma is None or len(phase) < 3:
-            st.warning("Insufficient coupling events for polar reconstruction.")
+        if result["phase"] is not None:
+            fig_polar = plotly_so_spindle_coupling(result["phase"], result["sigma_peak"])
+            st.plotly_chart(fig_polar, use_container_width=True)
         else:
-            coup_fig = plotly_so_spindle_coupling(phase, sigma)
-            st.plotly_chart(coup_fig, use_container_width=True)
+            st.info("No coupling data available for this recording.")
+
+if __name__ == "__main__":
+    main()
 
     st.divider()
     export = report_df.iloc[0].to_dict()
