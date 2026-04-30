@@ -843,8 +843,9 @@ def main() -> None:
             key="win_slider",
             help="30 s viewport. Use Plotly controls to zoom.",
         )
-       fig = plotly_eeg_window(times, data, sp_df, results['hyp_sample'], start_t, win_size, ch_name, sf)
-        )
+        
+        # Fixed indentation and removed stray parenthesis below
+        fig = plotly_eeg_window(times, data, sp_df, results['hyp_sample'], win_start, 30.0, ch_name, sf)
         st.plotly_chart(fig, use_container_width=True)
 
     with tab_outlook:
@@ -852,6 +853,7 @@ def main() -> None:
             '<p class="cyber-section-title">Cognitive outlook (heuristic)</p>',
             unsafe_allow_html=True,
         )
+      
         st.markdown(
             f"<div class='cyber-panel'><span class='cyber-tag'>{outlook['tier']}</span>"
             f"<span style='color:#e8e8f0'>{outlook['tier_note']}</span></div>",
