@@ -806,10 +806,11 @@ def main() -> None:
     rec_bytes = rec_f.getvalue()
     hyp_bytes = hyp_f.getvalue()
 
-  try:
+    try:
         result = analyze_sleep(rec_bytes, hyp_bytes, rec_suffix)
     except Exception as e:
-        st.error(f"Could not load or analyze the files: {e}")
+        st.error(f"Could not load or analyze the files: {e}",
+       )
         return
 
     times = result["times"]
