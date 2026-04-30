@@ -851,7 +851,7 @@ hyp_sample = results['hyp_sample']
             help="30 s viewport. Use Plotly controls to zoom.",
         )
         
-        fig = plotly_eeg_window(times, data, sp_df, results['hyp_sample'], win_start, 30.0, ch_name, sf)
+        fig = plotly_eeg_window(times, data, sp_df, ['hyp_sample'], win_start, 30.0, ch_name, sf)
     st.plotly_chart(fig, use_container_width=True)
 
     with tab_outlook:
