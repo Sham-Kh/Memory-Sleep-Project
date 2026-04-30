@@ -825,27 +825,6 @@ def main() -> None:
         st.metric("SPINDLE DENSITY", f"{d:.2f}/min" if pd.notna(d) else "—")
     with c5:
         st.metric("COUPLING (R)", f"{report_df.iloc[0]['so_spindle_coupling_strength']:.3f}" if pd.notna(report_df.iloc[0]["so_spindle_coupling_strength"]) else "—")
-
-# 1. Extract metrics from your results dictionary
-    # 2. Construct the report_df to fix the NameError
-    metrics_data = {
-        "Metric": [
-            "Spindle Count", 
-            "Spindle Density (count/min)", 
-            "Mean Duration (s)", 
-            "Mean Amplitude (µV)", 
-            "Mean Frequency (Hz)"
-        ],
-        "Value": [
-            result["sp_count"],
-            round(result["sp_density"], 2),
-            round(result["sp_dur"], 2),
-            round(result["sp_amp"], 2),
-            round(result["sp_freq"], 2)
-        ]
-    }
-    
-    report_df = pd.DataFrame(metrics_data)
   
     tab_raw, tab_outlook, tab_stats, tab_research = st.tabs(
         ["EEG view", "Interpretation", "Summary table", "Coupling plot"]
