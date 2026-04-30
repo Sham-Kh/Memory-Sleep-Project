@@ -742,12 +742,45 @@ def plotly_eeg_window(
     return fig
 
 
-def main() -> None:
-    st.set_page_config(
-        page_title="Sleep Analysis",
-        page_icon="🌘",
-        layout="wide",
+def main():
+    # --- UI STYLING ---
+    st.markdown(f"""
+        <style>
+        .stApp {{
+            background: linear-gradient(135deg, #3D4DC2 0%, #1a1a2e 100%);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }}
+        @keyframes gradient {{
+            0% {{ background-position: 0% 50%; }}
+            50% {{ background-position: 100% 50%; }}
+            100% {{ background-position: 0% 50%; }}
+        }}
+        </style>
+    """, unsafe_allow_html=True)
+
+    # ... [Your existing data loading/analysis code here] ...
+
+    # After your analysis is done and report_df is created:
+    report_df = pd.DataFrame([stats]) # Assuming 'stats' is your results dict
+
+    tab_raw, tab_outlook, tab_stats, tab_research = st.tabs(
+        ["EEG view", "Interpretation", "Summary table", "Coupling plot"]
     )
+
+    # ... [Tab logic goes here] ...
+
+    # --- FIX FOR NAMEERROR ---
+    # Move any logic that uses report_df INSIDE main()
+    st.sidebar.header("Export Data")
+    if st.sidebar.button("Prepare Export"):
+        export = report_df.iloc[0].to_dict()
+        st.sidebar.json(export)
+        st.sidebar.success("Metadata extracted successfully.")
+
+# This ensures main() runs and all variables are contained within it
+if __name__ == "__main__":
+    main()
     inject_cyberpunk_theme()
 
     st.markdown(
