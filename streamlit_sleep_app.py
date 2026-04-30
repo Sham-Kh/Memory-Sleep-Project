@@ -366,7 +366,7 @@ def analyze_sleep(rec_bytes: bytes, hyp_bytes: bytes, _rec_suffix: str) -> dict:
         "times": times,
         "data": data,
         "hyp_epoch": hyp_epoch,
-        "hyp_sample": hyp_sample,  
+        "hyp_sample": hyp_sample, # 
         "sp_df": sp_df,
         "sw_df": sw_df,
         "n2n3_minutes": n2n3_minutes,
