@@ -359,7 +359,27 @@ def analyze_sleep(
 ) -> dict:
     import io
     
-    # We use a temporary directory to handle the .rec extension trick
+    hyp_sample = yasa.hypno_upsample_to_data(
+        hypno=hyp_epoch, sf_hypno=1 / EPOCH_SEC, data=data, sf_data=sf
+    )
+
+    return {
+        "ch_name": ch_name,
+        "sf": sf,
+        "times": times,
+        "data": data,
+        "hyp_epoch": hyp_epoch,
+        "hyp_sample": hyp_sample,  
+        "sp_df": sp_df,
+        "sw_df": sw_df,
+        "n2n3_minutes": n2n3_minutes,
+        "n_spindles": int(len(sp_df)),
+        "n_slow_waves": int(len(sw_df)),
+        "phase": phase,
+        "sigma_peak": sigma_peak,
+        "duration_sec": float(times[-1]) if len(times) else 0.0,
+    }
+    
     with tempfile.TemporaryDirectory() as td:
         td_path = Path(td)
         # Create a file with an .edf suffix so MNE knows how to read it
@@ -789,11 +809,35 @@ def main() -> None:
     rec_bytes = rec_f.getvalue()
     hyp_bytes = hyp_f.getvalue()
 
-    try:
+  try:
         result = analyze_sleep(rec_bytes, hyp_bytes, rec_suffix)
     except Exception as e:
         st.error(f"Could not load or analyze the files: {e}")
-        return
+        return # This 'return' is good here; it stops the app if there's an error
+
+    # --- 1. EXTRACT DATA FROM RESULT ---
+    times = result["times"]
+    data = result["data"]
+    sp_df = result["sp_df"]
+    sf = result["sf"]
+    # Ensure you added "hyp_sample" to the return dict in analyze_sleep()
+    hyp_sample = result.get("hyp_sample") 
+    duration = result["duration_sec"]
+    
+    # --- 2. GENERATE DATA FRAMES ---
+    report_df = build_report_row(result)
+    outlook = compute_cognitive_outlook(report_df.iloc[0])
+
+    # --- 3. SESSION STATE LOGIC ---
+    upload_key = f"{rec_f.name}:{len(rec_bytes)}_{hyp_f.name}:{len(hyp_bytes)}"
+    if st.session_state.get("_sleep_upload_key") != upload_key:
+        st.session_state["_sleep_upload_key"] = upload_key
+        st.session_state.pop("win_slider", None)
+
+    if "win_slider" not in st.session_state:
+        st.session_state["win_slider"] = float(
+            default_window_start(result["hyp_epoch"], sp_df, duration)
+        )
 
     times = result["times"]
     data = result["data"]
@@ -876,7 +920,7 @@ def main() -> None:
         st.markdown("**Sleep-quality signal (non-clinical)**")
         st.write(outlook["quality_narrative"])
 
-    with tab_stats:
+with tab_stats:
         st.markdown('<p class="cyber-section-title">Metrics Summary</p>', unsafe_allow_html=True)
         st.dataframe(report_df, use_container_width=True)
 
@@ -887,14 +931,14 @@ def main() -> None:
         else:
             st.info("No coupling data available for this recording.")
 
-if __name__ == "__main__":
-    main()
-
+    # --- EXPORT LOGIC (Now inside main) ---
     st.divider()
+    # These variables are now accessible because we are still inside the main() function scope
     export = report_df.iloc[0].to_dict()
     export["oscillatory_index_0_100"] = round(outlook["composite"], 2)
     export["outlook_tier"] = outlook["tier"]
     report_csv = pd.DataFrame([export]).to_csv(index=False)
+    
     cols = st.columns([3, 1])
     with cols[0]:
         st.caption("Download the summary metrics as a CSV file.")
@@ -907,6 +951,6 @@ if __name__ == "__main__":
             use_container_width=True,
         )
 
-
+# Final entry point for the script
 if __name__ == "__main__":
     main()
