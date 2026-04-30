@@ -671,11 +671,11 @@ def plotly_eeg_window(
     times: np.ndarray,
     data: np.ndarray,
     sp_df: pd.DataFrame,
-    hyp_sample: np.ndarray,  # <--- Add this argument
+    hyp_sample: np.ndarray,  # Add this
     window_start: float,
     window_sec: float,
     ch_name: str,
-    sf: float,               # <--- Add sf (sampling frequency) to help with indexing
+    sf: float,               # Add this
 ) -> go.Figure:
     t_end = window_start + window_sec
     mask = (times >= window_start) & (times < t_end)
