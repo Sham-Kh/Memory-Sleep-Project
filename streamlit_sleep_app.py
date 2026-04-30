@@ -399,35 +399,21 @@ def analyze_sleep(rec_bytes: bytes, hyp_bytes: bytes, _rec_suffix: str) -> dict:
         max_dur = raw.n_times / sf
         raw.set_annotations(hyp_to_annotations(hyp_epoch, max_dur))
       
-# --- START OF TRIMMING LOGIC ---
         eeg_dur = raw.n_times / sf
         hyp_dur = len(hyp_epoch) * EPOCH_SEC
         
-        # 1. Align the objects
         if hyp_dur > eeg_dur:
             n_epochs_to_keep = int(eeg_dur // EPOCH_SEC)
             hyp_epoch = hyp_epoch[:n_epochs_to_keep]
         elif eeg_dur > hyp_dur:
             raw.crop(0, hyp_dur)
-
-        # 2. Extract the data
-        ch_name = find_channel(raw, DEFAULT_CHANNEL)
+            
+        # Final safety check before upsampling
         data = raw.get_data(picks=[ch_name]).squeeze() * 1e6
-        times = raw.times.copy()
-
-        # 3. Final matching (The "Safety Valve")
-        # Ensure hyp_epoch doesn't represent more time than 'data' has
         expected_hyp_len = int(len(data) / (sf * EPOCH_SEC))
         if len(hyp_epoch) > expected_hyp_len:
             hyp_epoch = hyp_epoch[:expected_hyp_len]
-        # --- END OF TRIMMING LOGIC ---
-        # Now proceed with upsampling
-        hyp_sample = yasa.hypno_upsample_to_data(
-            hypno=hyp_epoch, sf_hypno=1 / EPOCH_SEC, data=data, sf_data=sf
-        )
-        # --- END OF TRIMMING LOGIC ---
 
-        # Now proceed with upsampling
         hyp_sample = yasa.hypno_upsample_to_data(
             hypno=hyp_epoch, sf_hypno=1 / EPOCH_SEC, data=data, sf_data=sf
         )
