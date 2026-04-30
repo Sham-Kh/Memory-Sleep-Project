@@ -915,7 +915,7 @@ def main() -> None:
         st.markdown("**Sleep-quality signal (non-clinical)**")
         st.write(outlook["quality_narrative"])
 
-with tab_stats:
+    with tab_stats:
         st.markdown('<p class="cyber-section-title">Metrics Summary</p>', unsafe_allow_html=True)
         st.dataframe(report_df, use_container_width=True)
 
