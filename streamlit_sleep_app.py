@@ -843,8 +843,7 @@ def main() -> None:
             key="win_slider",
             help="30 s viewport. Use Plotly controls to zoom.",
         )
-        fig = plotly_eeg_window(
-            times, data, sp_df, win_start, EPOCH_SEC, result["ch_name"]
+       fig = plotly_eeg_window(times, data, sp_df, results['hyp_sample'], start_t, win_size, ch_name, sf)
         )
         st.plotly_chart(fig, use_container_width=True)
 
