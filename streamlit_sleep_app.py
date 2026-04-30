@@ -352,12 +352,9 @@ def read_raw_from_uploaded_rec(rec_path: Path) -> mne.io.BaseRaw:
 
 
 @st.cache_data(show_spinner="Loading and analyzing EEG…")
-def analyze_sleep(
-    rec_bytes: bytes,
-    hyp_bytes: bytes,
-    _rec_suffix: str,
-) -> dict:
+def analyze_sleep(rec_bytes: bytes, hyp_bytes: bytes, _rec_suffix: str) -> dict:
     import io
+    hyp_epoch = np.array([])
     
     hyp_sample = yasa.hypno_upsample_to_data(
         hypno=hyp_epoch, sf_hypno=1 / EPOCH_SEC, data=data, sf_data=sf
