@@ -763,9 +763,8 @@ def plotly_eeg_window(
 
 
 def main() -> None:
-  
     st.set_page_config(
-        page_title="Sleep Analysis",
+    page_title="Sleep Analysis",
         page_icon="🌘",
         layout="wide",
     )
@@ -785,12 +784,10 @@ def main() -> None:
     )
 
     with st.sidebar:
-        st.markdown(
-            '<p class="cyber-sidebar-title">Data upload</p>',
-            unsafe_allow_html=True,
-        )
+        st.markdown('<p class="cyber-sidebar-title">Data upload</p>', unsafe_allow_html=True)
         rec_f = st.file_uploader("EEG (.rec / .edf)", type=["rec", "edf"])
         hyp_f = st.file_uploader("Hypnogram (.hyp / .edf)", type=["hyp", "edf"])
+      
         st.markdown(
             "<p style='color:#6a7088;font-size:0.75rem;margin-top:1.5rem;'>"
             "This tool does not replace clinical sleep scoring.</p>",
@@ -813,9 +810,8 @@ def main() -> None:
         result = analyze_sleep(rec_bytes, hyp_bytes, rec_suffix)
     except Exception as e:
         st.error(f"Could not load or analyze the files: {e}")
-        return # This 'return' is good here; it stops the app if there's an error
+        return
 
-    # --- 1. EXTRACT DATA FROM RESULT ---
     times = result["times"]
     data = result["data"]
     sp_df = result["sp_df"]
@@ -824,11 +820,9 @@ def main() -> None:
     hyp_sample = result.get("hyp_sample") 
     duration = result["duration_sec"]
     
-    # --- 2. GENERATE DATA FRAMES ---
     report_df = build_report_row(result)
     outlook = compute_cognitive_outlook(report_df.iloc[0])
 
-    # --- 3. SESSION STATE LOGIC ---
     upload_key = f"{rec_f.name}:{len(rec_bytes)}_{hyp_f.name}:{len(hyp_bytes)}"
     if st.session_state.get("_sleep_upload_key") != upload_key:
         st.session_state["_sleep_upload_key"] = upload_key
@@ -951,6 +945,5 @@ with tab_stats:
             use_container_width=True,
         )
 
-# Final entry point for the script
 if __name__ == "__main__":
     main()
