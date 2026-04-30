@@ -671,26 +671,36 @@ def plotly_eeg_window(
     times: np.ndarray,
     data: np.ndarray,
     sp_df: pd.DataFrame,
+    hyp_sample: np.ndarray,  # <--- Add this argument
     window_start: float,
     window_sec: float,
     ch_name: str,
+    sf: float,               # <--- Add sf (sampling frequency) to help with indexing
 ) -> go.Figure:
     t_end = window_start + window_sec
     mask = (times >= window_start) & (times < t_end)
     x = times[mask] - window_start
     y = data[mask]
+    
+    # Extract the hypnogram slice for this window
+    idx_start = int(window_start * sf)
+    idx_end = int(t_end * sf)
+    win_hyp = hyp_sample[idx_start:idx_end]
 
     fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=x,
-            y=y,
-            mode="lines",
-            name=ch_name,
-            line=dict(color=CYBER_ACCENT, width=1.1),
-        )
-    )
 
+    # --- ADD N2/N3 STAGE HIGHLIGHTS ---
+    # This colors the background based on the sleep stage
+    for i in range(0, len(win_hyp), int(sf)): # Check every 1 second to save performance
+        stage = win_hyp[i]
+        if stage in [2, 3]: # N2 or N3
+            color = "rgba(100, 149, 237, 0.1)" if stage == 2 else "rgba(0, 0, 139, 0.15)"
+            fig.add_vrect(
+                x0=i/sf, x1=(i + int(sf))/sf,
+                fillcolor=color, layer="below", line_width=0
+            )
+
+    # --- EXISTING SPINDLE HIGHLIGHTS ---
     if not sp_df.empty and {"Start", "End"}.issubset(sp_df.columns):
         for _, row in sp_df.iterrows():
             s = max(float(row["Start"]), window_start)
@@ -699,10 +709,21 @@ def plotly_eeg_window(
                 fig.add_vrect(
                     x0=s - window_start,
                     x1=e - window_start,
-                    fillcolor="rgba(255, 0, 234, 0.22)",
+                    fillcolor="rgba(255, 0, 234, 0.22)", # Pink for spindles
                     layer="below",
                     line_width=0,
                 )
+
+    # The EEG Line
+    fig.add_trace(
+        go.Scatter(
+            x=x, y=y, mode="lines", name=ch_name,
+            line=dict(color=CYBER_ACCENT, width=1.1),
+        )
+    )
+    
+    _cyber_plotly_base(fig) # Apply your theme
+    return fig
 
     fig.update_layout(
         title=dict(
