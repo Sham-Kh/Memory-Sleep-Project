@@ -829,6 +829,13 @@ def main() -> None:
         ["EEG view", "Interpretation", "Summary table", "Coupling plot"]
     )
 
+data = results['data']
+times = results['times']
+sp_df = results['sp_df']
+ch_name = results['ch_name']
+sf = results['sf'] 
+hyp_sample = results['hyp_sample']
+  
     with tab_raw:
         st.markdown(
             '<p class="cyber-section-title">EEG trace (30 s)</p>',
@@ -845,8 +852,8 @@ def main() -> None:
         )
         
         # Fixed indentation and removed stray parenthesis below
-        fig = plotly_eeg_window(times, data, sp_df, results['hyp_sample'], win_start, 30.0, ch_name, sf)
-        st.plotly_chart(fig, use_container_width=True)
+        fig = plotly_eeg_window(times, data, sp_df, hyp_sample, win_start, 30.0, ch_name, sf)
+    st.plotly_chart(fig, use_container_width=True)
 
     with tab_outlook:
         st.markdown(
