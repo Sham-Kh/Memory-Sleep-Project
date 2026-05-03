@@ -1,0 +1,18 @@
+[project]
+name = "memory-sleep-project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "matplotlib>=3.10.9",
+    "mne>=1.12.1",
+    "numpy>=2.4.4",
+    "pandas>=3.0.2",
+    "plotly>=6.7.0",
+    "scikit-learn>=1.8.0",
+    "scipy>=1.17.1",
+    "streamlit>=1.57.0",
+    "tensorpac>=0.6.5",
+    "yasa>=0.7.0",
+]

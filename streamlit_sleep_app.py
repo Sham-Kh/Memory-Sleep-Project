@@ -340,43 +340,40 @@ def find_channel(raw: mne.io.BaseRaw, requested: str) -> str:
     raise ValueError(f"Channel '{requested}' not found.")
 
 
+def read_raw_edf_or_bdf(path: Path) -> mne.io.BaseRaw:
+    """Load PSG: EDF/EDF+ first; on bad header, retry as BDF (MNE needs a .bdf path for the latter)."""
+    try:
+        return mne.io.read_raw_edf(path, preload=True, verbose=False)
+    except ValueError as err:
+        if "bad edf" not in str(err).lower():
+            raise
+        bdf_path = path.with_name(f"{path.stem}_as_bdf.bdf")
+        shutil.copyfile(path, bdf_path)
+        try:
+            return mne.io.read_raw_bdf(bdf_path, preload=True, verbose=False)
+        except Exception:
+            raise ValueError(
+                "This file is not readable as EDF/EDF+ or BDF. "
+                "Only standard European Data Format (EDF) and BioSemi BDF are supported. "
+                "Many systems use the .rec extension for proprietary exports — open the file in "
+                "your sleep software and export as EDF (or convert with a lab-approved tool), "
+                "then upload that export."
+            ) from err
+
+
 def read_raw_from_uploaded_rec(rec_path: Path) -> mne.io.BaseRaw:
     if rec_path.suffix.lower() == ".rec":
         td = tempfile.TemporaryDirectory()
         edf_copy = Path(td.name) / f"{rec_path.stem}.edf"
         shutil.copyfile(rec_path, edf_copy)
-        raw = mne.io.read_raw_edf(edf_copy, preload=True, verbose=False)
+        raw = read_raw_edf_or_bdf(edf_copy)
         td.cleanup()
         return raw
-    return mne.io.read_raw_edf(rec_path, preload=True, verbose=False)
+    return read_raw_edf_or_bdf(rec_path)
 
 
 @st.cache_data(show_spinner="Loading and analyzing EEG…")
 def analyze_sleep(rec_bytes: bytes, hyp_bytes: bytes, _rec_suffix: str) -> dict:
-    import io
-    hyp_epoch = np.array([])
-    
-    hyp_sample = yasa.hypno_upsample_to_data(
-        hypno=hyp_epoch, sf_hypno=1 / EPOCH_SEC, data=data, sf_data=sf
-    )
-
-    return {
-        "ch_name": ch_name,
-        "sf": sf,
-        "times": times,
-        "data": data,
-        "hyp_epoch": hyp_epoch,
-        "hyp_sample": hyp_sample, # 
-        "sp_df": sp_df,
-        "sw_df": sw_df,
-        "n2n3_minutes": n2n3_minutes,
-        "n_spindles": int(len(sp_df)),
-        "n_slow_waves": int(len(sw_df)),
-        "phase": phase,
-        "sigma_peak": sigma_peak,
-        "duration_sec": float(times[-1]) if len(times) else 0.0,
-    }
-    
     with tempfile.TemporaryDirectory() as td:
         td_path = Path(td)
         # Create a file with an .edf suffix so MNE knows how to read it
@@ -386,8 +383,8 @@ def analyze_sleep(rec_bytes: bytes, hyp_bytes: bytes, _rec_suffix: str) -> dict:
         rec_path.write_bytes(rec_bytes)
         hyp_path.write_bytes(hyp_bytes)
 
-        # Load the EEG
-        raw = mne.io.read_raw_edf(rec_path, preload=True, verbose=False)
+        # Load the EEG (true EDF/EDF+ or BDF; .rec only works if content is one of those)
+        raw = read_raw_edf_or_bdf(rec_path)
         sf = float(raw.info["sfreq"])
         
         # Load the Hypnogram
@@ -395,7 +392,7 @@ def analyze_sleep(rec_bytes: bytes, hyp_bytes: bytes, _rec_suffix: str) -> dict:
         
         # Ensure the hypnogram and EEG match in length
         # YASA needs these to be aligned perfectly
-# Get actual duration of the raw data
+        # Get actual duration of the raw data
         max_dur = raw.n_times / sf
         raw.set_annotations(hyp_to_annotations(hyp_epoch, max_dur))
       
@@ -407,21 +404,14 @@ def analyze_sleep(rec_bytes: bytes, hyp_bytes: bytes, _rec_suffix: str) -> dict:
             hyp_epoch = hyp_epoch[:n_epochs_to_keep]
         elif eeg_dur > hyp_dur:
             raw.crop(0, hyp_dur)
-            
-        # Final safety check before upsampling
+
+        ch_name = find_channel(raw, DEFAULT_CHANNEL)
         data = raw.get_data(picks=[ch_name]).squeeze() * 1e6
         expected_hyp_len = int(len(data) / (sf * EPOCH_SEC))
         if len(hyp_epoch) > expected_hyp_len:
             hyp_epoch = hyp_epoch[:expected_hyp_len]
 
-        hyp_sample = yasa.hypno_upsample_to_data(
-            hypno=hyp_epoch, sf_hypno=1 / EPOCH_SEC, data=data, sf_data=sf
-        )
-        ch_name = find_channel(raw, DEFAULT_CHANNEL)
-        data = raw.get_data(picks=[ch_name]).squeeze() * 1e6
         times = raw.times.copy()
-
-        # Resample hypnogram to match EEG data points
         hyp_sample = yasa.hypno_upsample_to_data(
             hypno=hyp_epoch, sf_hypno=1 / EPOCH_SEC, data=data, sf_data=sf
         )
@@ -462,6 +452,7 @@ def analyze_sleep(rec_bytes: bytes, hyp_bytes: bytes, _rec_suffix: str) -> dict:
             "times": times,
             "data": data,
             "hyp_epoch": hyp_epoch,
+            "hyp_sample": hyp_sample,
             "sp_df": sp_df,
             "sw_df": sw_df,
             "n2n3_minutes": n2n3_minutes,
@@ -817,24 +808,7 @@ def main() -> None:
             default_window_start(result["hyp_epoch"], sp_df, duration)
         )
 
-    times = result["times"]
-    data = result["data"]
-    sp_df = result["sp_df"]
-    duration = result["duration_sec"]
     max_start = max(0.0, duration - EPOCH_SEC)
-    report_df = build_report_row(result)
-    outlook = compute_cognitive_outlook(report_df.iloc[0])
-
-    upload_key = f"{rec_f.name}:{len(rec_bytes)}_{hyp_f.name}:{len(hyp_bytes)}"
-    if st.session_state.get("_sleep_upload_key") != upload_key:
-        st.session_state["_sleep_upload_key"] = upload_key
-        st.session_state.pop("win_slider", None)
-
-    if "win_slider" not in st.session_state:
-        st.session_state["win_slider"] = float(
-            default_window_start(result["hyp_epoch"], sp_df, duration)
-        )
-
     c1, c2, c3, c4, c5 = st.columns(5)
     with c1:
         st.metric("OSCILLATORY INDEX", f"{outlook['composite']:.0f}", help="Heuristic 0–100 blend of spindle density, SW rate, coupling.")
