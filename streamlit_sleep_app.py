@@ -851,6 +851,59 @@ def main() -> None:
         fig_eeg = plotly_eeg_window(times, data, sp_df, hyp_sample, win_start, 30.0, result["ch_name"], sf)
         st.plotly_chart(fig_eeg, use_container_width=True)
 
+        fig_eeg = plotly_eeg_window(
+            times,
+            data,
+            sp_df,
+            hyp_sample,
+            win_start,
+            30.0,
+            result["ch_name"],
+            sf,
+        )
+        st.plotly_chart(fig_eeg, use_container_width=True)
+
+        # Export the currently displayed EEG window
+        window_end = min(win_start + 30.0, duration)
+        window_mask = (times >= win_start) & (times < window_end)
+
+        eeg_export = pd.DataFrame(
+            {
+                "time_seconds": times[window_mask] - win_start,
+                "absolute_time_seconds": times[window_mask],
+                result["ch_name"]: data[window_mask],
+            }
+        )
+
+        # Add the sleep stage for each EEG sample, if available
+        if hyp_sample is not None:
+            hyp_indices = np.clip(
+                (times[window_mask] * sf).astype(int),
+                0,
+                len(hyp_sample) - 1,
+            )
+            eeg_export["sleep_stage"] = hyp_sample[hyp_indices]
+
+        # Mark samples overlapping detected spindle events
+        eeg_export["spindle_detected"] = False
+        if not sp_df.empty and {"Start", "End"}.issubset(sp_df.columns):
+            for _, event in sp_df.iterrows():
+                event_mask = (
+                    (times[window_mask] >= float(event["Start"]))
+                    & (times[window_mask] <= float(event["End"]))
+                )
+                eeg_export.loc[event_mask, "spindle_detected"] = True
+
+        eeg_csv = eeg_export.to_csv(index=False)
+
+        st.download_button(
+            label="DOWNLOAD EEG WINDOW CSV",
+            data=eeg_csv,
+            file_name=f"sleep_eeg_{win_start:.0f}s_window.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+  
     with tab_outlook:
         st.markdown(
             '<p class="cyber-section-title">Cognitive outlook (heuristic)</p>',
